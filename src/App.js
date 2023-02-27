@@ -5,8 +5,9 @@ import Logo from "./components/Logo/Logo"
 import ImageLinkForm from "./components/ImageLinkForm/ImageLinkForm"
 import Rank from "./components/Rank/Rank"
 import ParticlesBg from "particles-bg"
+import FaceRecognition from "./components/FaceRecognition/FaceRecognition"
 
-console.log("click")
+
 // Your PAT (Personal Access Token) can be found in the portal under Authentification
 const PAT = "8ba9ba6ec08a47f49c0e39ded5ddb7c2"
 // Specify the correct user_id/app_id pairings
@@ -20,9 +21,10 @@ const IMAGE_URL = "https://samples.clarifai.com/metro-north.jpg"
 
 function App() {
 	const [input, setInput] = useState("")
+	const [imageUrl, setImageUrl] = useState("")
 
 	const onInputChange = (event) => {
-		console.log(event.target.value)
+		setInput(event.target.value)
 	}
 
 	const onButtonSubmit = () => {
@@ -30,6 +32,7 @@ function App() {
 		// YOU DO NOT NEED TO CHANGE ANYTHING BELOW THIS LINE TO RUN THIS EXAMPLE
 		///////////////////////////////////////////////////////////////////////////////////
 
+		setImageUrl(input)
 		const raw = JSON.stringify({
 			user_app_id: {
 				user_id: USER_ID,
@@ -39,7 +42,7 @@ function App() {
 				{
 					data: {
 						image: {
-							url: IMAGE_URL,
+							url: input,
 						},
 					},
 				},
@@ -67,8 +70,8 @@ function App() {
 				"/outputs",
 			requestOptions
 		)
-			.then((response) => response.text())
-			.then((result) => console.log(result))
+			.then((response) => response.json())
+			.then((result) => console.log(result.outputs[0].data.regions[0].region_info.bounding_box))
 			.catch((error) => console.log("error", error))
 	}
 	return (
@@ -82,7 +85,7 @@ function App() {
 				onInputChange={onInputChange}
 				onButtonSubmit={onButtonSubmit}
 			/>
-			{/* <FaceRecognition />} */}
+			<FaceRecognition imageUrl={imageUrl}/>
 		</div>
 	)
 }
