@@ -6,7 +6,8 @@ import ImageLinkForm from "./components/ImageLinkForm/ImageLinkForm"
 import Rank from "./components/Rank/Rank"
 import ParticlesBg from "particles-bg"
 import FaceRecognition from "./components/FaceRecognition/FaceRecognition"
-
+import SignIn from "./components/SignIn/SignIn"
+import Register from "./components/Register/Register"
 
 // Your PAT (Personal Access Token) can be found in the portal under Authentification
 const PAT = "8ba9ba6ec08a47f49c0e39ded5ddb7c2"
@@ -22,9 +23,40 @@ const IMAGE_URL = "https://samples.clarifai.com/metro-north.jpg"
 function App() {
 	const [input, setInput] = useState("")
 	const [imageUrl, setImageUrl] = useState("")
+	const [box, setBox] = useState({})
+	const [route, setRoute] = useState("signin")
+	const [isSignedIn, setIsSignedIn] = useState(false)
+
+	const calculateFaceLocation = (data) => {
+		const clarifaiFace =
+			data.outputs[0].data.regions[0].region_info.bounding_box
+		const image = document.getElementById("inputimage")
+		const width = Number(image.width)
+		const height = Number(image.height)
+		return {
+			leftCol: clarifaiFace.left_col * width,
+			topRow: clarifaiFace.top_row * height,
+			rightCol: width - clarifaiFace.right_col * width,
+			bottomRow: height - clarifaiFace.bottom_row * height,
+		}
+	}
+
+	const displayFaceBox = (box) => {
+		console.log(box)
+		setBox(box)
+	}
 
 	const onInputChange = (event) => {
 		setInput(event.target.value)
+	}
+
+	const onRouteChange = (newroute) => {
+		if(newroute === 'signout'){
+			setIsSignedIn(false)
+		} else if (newroute === 'home') {
+			setIsSignedIn(true)
+		}
+		setRoute(newroute)
 	}
 
 	const onButtonSubmit = () => {
@@ -71,21 +103,30 @@ function App() {
 			requestOptions
 		)
 			.then((response) => response.json())
-			.then((result) => console.log(result.outputs[0].data.regions[0].region_info.bounding_box))
+			.then((result) => displayFaceBox(calculateFaceLocation(result)))
 			.catch((error) => console.log("error", error))
 	}
 	return (
 		<div className="App">
 			<ParticlesBg type="circle" bg={true} />
-			<Navigation />
-			<Logo />
+			<Navigation isSignedIn={isSignedIn} onRouteChange={onRouteChange} />
+			{route === "home" ? (
+				<div>
+					<Logo />
 
-			<Rank />
-			<ImageLinkForm
-				onInputChange={onInputChange}
-				onButtonSubmit={onButtonSubmit}
-			/>
-			<FaceRecognition imageUrl={imageUrl}/>
+					<Rank />
+					<ImageLinkForm
+						onInputChange={onInputChange}
+						onButtonSubmit={onButtonSubmit}
+					/>
+
+					<FaceRecognition box={box} imageUrl={imageUrl} />
+				</div>
+			) : route === "signin" ? (
+				<SignIn onRouteChange={onRouteChange} />
+			) : (
+				<Register onRouteChange={onRouteChange} />
+			)}
 		</div>
 	)
 }
