@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import "./App.css"
 import Navigation from "./components/Navigation/Navigation"
 import Logo from "./components/Logo/Logo"
@@ -26,6 +26,25 @@ function App() {
 	const [box, setBox] = useState({})
 	const [route, setRoute] = useState("signin")
 	const [isSignedIn, setIsSignedIn] = useState(false)
+	const [user, setUser] = useState({
+		id: "",
+		name: "",
+		email: "",
+		password: "",
+		entries: 0,
+		joined: "",
+	})
+
+	const loadUser = (data) => {
+		setUser({
+			id: data.id,
+			name: data.name,
+			email: data.email,
+			password: data.password,
+			entries: data.entries,
+			joined: data.joined,
+		})
+	}
 
 	const calculateFaceLocation = (data) => {
 		const clarifaiFace =
@@ -42,7 +61,6 @@ function App() {
 	}
 
 	const displayFaceBox = (box) => {
-		console.log(box)
 		setBox(box)
 	}
 
@@ -51,9 +69,9 @@ function App() {
 	}
 
 	const onRouteChange = (newroute) => {
-		if(newroute === 'signout'){
+		if (newroute === "signout") {
 			setIsSignedIn(false)
-		} else if (newroute === 'home') {
+		} else if (newroute === "home") {
 			setIsSignedIn(true)
 		}
 		setRoute(newroute)
@@ -101,11 +119,28 @@ function App() {
 				MODEL_VERSION_ID +
 				"/outputs",
 			requestOptions
+		).then((response) =>
+			response
+				.json()
+				.then((data) => {
+					if (data) {
+						fetch("http://localhost:3001/image", {
+							method: "put",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								id: user.id,
+							}),
+						}).then(res => res.json())
+						.then((count) => {
+							setUser({...user, entries: count})
+						})
+					}
+					displayFaceBox(calculateFaceLocation(data))
+				})
+				.catch((error) => console.log("error", error))
 		)
-			.then((response) => response.json())
-			.then((result) => displayFaceBox(calculateFaceLocation(result)))
-			.catch((error) => console.log("error", error))
 	}
+
 	return (
 		<div className="App">
 			<ParticlesBg type="circle" bg={true} />
@@ -114,7 +149,7 @@ function App() {
 				<div>
 					<Logo />
 
-					<Rank />
+					<Rank userName={user.name} userEntries={user.entries} />
 					<ImageLinkForm
 						onInputChange={onInputChange}
 						onButtonSubmit={onButtonSubmit}
@@ -123,9 +158,9 @@ function App() {
 					<FaceRecognition box={box} imageUrl={imageUrl} />
 				</div>
 			) : route === "signin" ? (
-				<SignIn onRouteChange={onRouteChange} />
+				<SignIn onRouteChange={onRouteChange} loadUser={loadUser} />
 			) : (
-				<Register onRouteChange={onRouteChange} />
+				<Register onRouteChange={onRouteChange} loadUser={loadUser} />
 			)}
 		</div>
 	)
