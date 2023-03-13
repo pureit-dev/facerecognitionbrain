@@ -9,31 +9,29 @@ import FaceRecognition from "./components/FaceRecognition/FaceRecognition"
 import SignIn from "./components/SignIn/SignIn"
 import Register from "./components/Register/Register"
 
-// Your PAT (Personal Access Token) can be found in the portal under Authentification
-const PAT = "8ba9ba6ec08a47f49c0e39ded5ddb7c2"
-// Specify the correct user_id/app_id pairings
-// Since you're making inferences outside your app's scope
-const USER_ID = ""
-const APP_ID = "face-recognition-brain"
-// Change these to whatever model and image URL you want to use
-const MODEL_ID = "face-detection"
-const MODEL_VERSION_ID = "6dc7e46bc9124c5c8824be4822abe105"
-const IMAGE_URL = "https://samples.clarifai.com/metro-north.jpg"
-
-function App() {
-	const [input, setInput] = useState("")
-	const [imageUrl, setImageUrl] = useState("")
-	const [box, setBox] = useState({})
-	const [route, setRoute] = useState("signin")
-	const [isSignedIn, setIsSignedIn] = useState(false)
-	const [user, setUser] = useState({
+const initialState = {
+	user: {
 		id: "",
 		name: "",
 		email: "",
 		password: "",
 		entries: 0,
 		joined: "",
-	})
+	},
+	input: "",
+	imageUrl: "",
+	box: {},
+	route: "signin",
+	isSignedIn: false,
+}
+
+function App() {
+	const [input, setInput] = useState(initialState.input)
+	const [imageUrl, setImageUrl] = useState(initialState.imageUrl)
+	const [box, setBox] = useState(initialState.box)
+	const [route, setRoute] = useState(initialState.route)
+	const [isSignedIn, setIsSignedIn] = useState(initialState.isSignedIn)
+	const [user, setUser] = useState(initialState.user)
 
 	const loadUser = (data) => {
 		setUser({
@@ -70,7 +68,11 @@ function App() {
 
 	const onRouteChange = (newroute) => {
 		if (newroute === "signout") {
-			setIsSignedIn(false)
+			setIsSignedIn(initialState.isSignedIn)
+			setUser(initialState.user)
+			setBox(initialState.box)
+			setImageUrl(initialState.imageUrl)
+			setRoute(initialState.route)
 		} else if (newroute === "home") {
 			setIsSignedIn(true)
 		}
@@ -83,62 +85,33 @@ function App() {
 		///////////////////////////////////////////////////////////////////////////////////
 
 		setImageUrl(input)
-		const raw = JSON.stringify({
-			user_app_id: {
-				user_id: USER_ID,
-				app_id: APP_ID,
-			},
-			inputs: [
-				{
-					data: {
-						image: {
-							url: input,
-						},
-					},
-				},
-			],
+
+		fetch("http://localhost:3001/imageurl", {
+			method: "post",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				input: input,
+			}),
 		})
+			.then((response) => response.json())
 
-		const requestOptions = {
-			method: "POST",
-			headers: {
-				Accept: "application/json",
-				Authorization: "Key " + PAT,
-			},
-			body: raw,
-		}
-
-		// NOTE: MODEL_VERSION_ID is optional, you can also call prediction with the MODEL_ID only
-		// https://api.clarifai.com/v2/models/{YOUR_MODEL_ID}/outputs
-		// this will default to the latest version_id
-
-		fetch(
-			"https://api.clarifai.com/v2/models/" +
-				MODEL_ID +
-				"/versions/" +
-				MODEL_VERSION_ID +
-				"/outputs",
-			requestOptions
-		).then((response) =>
-			response
-				.json()
-				.then((data) => {
-					if (data) {
-						fetch("http://localhost:3001/image", {
-							method: "put",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								id: user.id,
-							}),
-						}).then(res => res.json())
+			.then((data) => {
+				if (data) {
+					fetch("http://localhost:3001/image", {
+						method: "put",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							id: user.id,
+						}),
+					})
+						.then((response) => response.json())
 						.then((count) => {
-							setUser({...user, entries: count})
+							setUser({ ...user, entries: count })
 						})
-					}
-					displayFaceBox(calculateFaceLocation(data))
-				})
-				.catch((error) => console.log("error", error))
-		)
+						.catch((error) => console.log("error", error))
+				}
+				displayFaceBox(calculateFaceLocation(data))
+			})
 	}
 
 	return (
